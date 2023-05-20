@@ -25,8 +25,6 @@ x = input("wiht alpha-beta or not (y,n)")
 y = int(input("choose the level 1 , 2 or 3 : "))
 
 # function to create a board
-
-
 def create_board():
     board = np.zeros((ROW_COUNT, COLUMN_COUNT))
     return board
@@ -64,26 +62,26 @@ def winning_move(board, piece):
     for c in range(COLUMN_COUNT - 3):
         for r in range(ROW_COUNT):
             if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][
-                    c + 3] == piece:
+                c + 3] == piece:
                 return True
     # check vertical location for win
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT - 3):
             if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][
-                    c] == piece:
+                c] == piece:
                 return True
     # check +ve diagonal location for win
     for c in range(COLUMN_COUNT - 3):
         for r in range(ROW_COUNT - 3):
             if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and board[r + 3][
-                    c + 3] == piece:
+                c + 3] == piece:
                 return True
 
     # check -ve diagonal location for win
     for c in range(COLUMN_COUNT - 3):
         for r in range(3, ROW_COUNT):
             if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and board[r - 3][
-                    c + 3] == piece:
+                c + 3] == piece:
                 return True
 
 
@@ -114,26 +112,26 @@ def evaluate_window(window, piece):
 def score_position(board, piece):
     score = 0
 
-    # Score center column
+    ## Score center column
     center_array = [int(i) for i in list(board[:, COLUMN_COUNT // 2])]
     center_count = center_array.count(piece)
     score += center_count * 3
 
-    # Score Horizontal
+    ## Score Horizontal
     for r in range(ROW_COUNT):
         row_array = [int(i) for i in list(board[r, :])]
     for c in range(COLUMN_COUNT - 3):
         window = row_array[c:c + WINDOW_LENGTH]
         score += evaluate_window(window, piece)
 
-    # Score Vertical
+    ## Score Vertical
     for c in range(COLUMN_COUNT):
         col_array = [int(i) for i in list(board[:, c])]
         for r in range(ROW_COUNT - 3):
             window = col_array[r:r + WINDOW_LENGTH]
             score += evaluate_window(window, piece)
 
-    # Score posiive sloped diagonal
+    ## Score posiive sloped diagonal
     for r in range(ROW_COUNT - 3):
         for c in range(COLUMN_COUNT - 3):
             window = [board[r + i][c + i] for i in range(WINDOW_LENGTH)]
@@ -147,11 +145,105 @@ def score_position(board, piece):
     return score
 
 
+def is_terminal_node(board):
+    return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
+
+
+# this function is a decision making algorithm to select the best mover of AI player
+# when a player play it expolar all possible future game states at each lever of tree and evalute
+# a score for all possible mover and choose the best move that make score of AI highest
+# (take into your consideration that the player will play optimally to try minimize AI player)
+def minimax(board, depth, maximizingPlayer):
+    # return all valid location(cols)
+    valid_locations = get_valid_locations(board)
+    # check if game is over with player wins or AI wins or draw
+    is_terminal = is_terminal_node(board)
+    # base case is reach to maximum level or the game is over
+    if depth == 0 or is_terminal:
+        # if game is over which state was (player win or AI wins or draw)
+        if is_terminal:
+            # if AI wins --> take high score(AI)
+            if winning_move(board, AI_PIECE):
+                return (None, 100000000000000)
+            # if oppnent (player) wins --> take low score(AI)
+            elif winning_move(board, PLAYER_PIECE):
+                return (None, -10000000000000)
+            # if the board is full (draw) --> take a zero score
+            else:  # Game is over, no more valid moves
+                return (None, 0)
+        # reach to the maximum level of the tree but the game is not over yet
+        else:  # Depth is zero
+            # return the score of the current game state
+            return (None, score_position(board, AI_PIECE))
+    # if maximizingPlayer is true--> algo will find move that lead to the highest score of AI player
+    if maximizingPlayer:
+        # take -ve infinty
+        value = -math.inf
+        # iterat in all vaild cols
+        for col in valid_locations:
+            # get row of the col
+            row = get_next_open_row(board, col)
+            # take copy form orginal to search in it
+            b_copy = board.copy()
+            # drop a piece on board
+            drop_piece(b_copy, row, col, AI_PIECE)
+            # call minimax for the opposite player that try to minimzie score of AI player & go to next level
+            new_score = minimax(b_copy, depth - 1, False)[1]
+            # updata value & column when find a better mover
+            if new_score > value:
+                value = new_score
+                column = col
+        return column, value
+    # miximizing player is false --> algo find move lead to lowest score of player
+    else:  # Minimizing player
+        # +ve infinty
+        value = math.inf
+        # loop over all col
+        for col in valid_locations:
+            # return row of col
+            row = get_next_open_row(board, col)
+            # copy form board to search from it
+            b_copy = board.copy()
+            # drop a piece on board
+            drop_piece(b_copy, row, col, PLAYER_PIECE)
+            # call minimax for the opposite player to maximize score of him
+            new_score = minimax(b_copy, depth - 1, True)[1]
+            # update value & col when find a better move
+            if new_score < value:
+                value = new_score
+                column = col
+        return column, value
+
+# function to get all vaild location
+def get_valid_locations(board):
+    valid_locations = []
+    for col in range(COLUMN_COUNT):
+        if is_valid_location(board, col):
+            valid_locations.append(col)
+    return valid_locations
+
+
+# function returns the column that leads to the strongest board position for the given player
+def pick_best_move(board, piece):
+    valid_locations = get_valid_locations(board)
+    best_score = -10000
+    best_col = random.choice(valid_locations)
+    for col in valid_locations:
+        row = get_next_open_row(board, col)
+        temp_board = board.copy()
+        drop_piece(temp_board, row, col, piece)
+        score = score_position(temp_board, piece)
+        if score > best_score:
+            best_score = score
+            best_col = col
+
+    return best_col
+
 def draw_board(board):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r *
-                             SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
+                            SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
             pygame.draw.circle(screen, BLACK, (
                 int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
 
@@ -166,29 +258,7 @@ def draw_board(board):
     pygame.display.update()
 
 
-def measure_performance():
-    # Define the x-axis values (depth of the game tree)
-    depths = [1, 2, 3, 4, 5]
 
-    # Define the y-axis values (number of nodes explored)
-    minimax_nodes = [10, 24, 54, 128, 310]
-    minimax_wab_nodes = [6, 10, 16, 34, 86]
-
-    # Create a line plot for each algorithm
-    plt.plot(depths, minimax_nodes, label='Minimax')
-    plt.plot(depths, minimax_wab_nodes,
-             label='Minimax with alpha-beta pruning')
-
-    # Add labels and title to the plot
-    plt.xlabel('Depth of game tree')
-    plt.ylabel('Number of nodes explored')
-    plt.title('Comparison of Minimax and Minimax with alpha-beta pruning')
-
-    # Add a legend to the plot
-    plt.legend()
-
-    # Display the plot
-    plt.show()
 
 
 board = create_board()
@@ -251,7 +321,13 @@ while not game_over:
 
     # Ask for player 2  input
     if turn == AI and not game_over:
-
+        if x == 'n':
+            if y == 1 :
+                col, minimax_score = minimax(board, 3, True)
+            elif y == 2:
+                col, minimax_score = minimax(board, 4, True)
+            elif y == 3:
+                col, minimax_score = minimax(board, 5, True)
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
@@ -266,4 +342,3 @@ while not game_over:
     if game_over:
         pygame.time.wait(3000)
 
-measure_performance()
