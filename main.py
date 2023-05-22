@@ -214,6 +214,51 @@ def minimax(board, depth, maximizingPlayer):
                 column = col
         return column, value
 
+
+def minimax_Alpha_Beta(board, depth, alpha, beta, maximizing_player):
+    valid_locations = get_valid_locations(board)
+    is_terminal = is_terminal_node(board)
+    if depth == 0 or is_terminal:
+        if is_terminal: 
+            if winning_move(board, AI_PIECE):
+                return (None, 10000000)
+            elif winning_move(board, PLAYER_PIECE):
+                return (None, -10000000)
+            else:
+                return (None, 0)
+        else: 
+            return (None, score_position(board, AI_PIECE))
+    if maximizing_player:
+        value = -math.inf
+        column = random.choice(valid_locations)
+        for col in valid_locations:
+            row = get_next_open_row(board, col)
+            b_copy = board.copy()
+            drop_piece(b_copy, row, col, AI_PIECE)
+            new_score = minimax_Alpha_Beta(b_copy, depth-1, alpha, beta, False)[1]
+            if new_score > value:
+                value = new_score
+                column = col
+            alpha = max(value, alpha) 
+            if alpha >= beta:
+                break
+        return column, value
+    else:
+        value = math.inf
+        column = random.choice(valid_locations)
+        for col in valid_locations:
+            row = get_next_open_row(board, col)
+            b_copy = board.copy()
+            drop_piece(b_copy, row, col, PLAYER_PIECE)
+            new_score = minimax_Alpha_Beta(b_copy, depth-1, alpha, beta, True)[1]
+            if new_score < value:
+                value = new_score
+                column = col
+            beta = min(value, beta) 
+            if alpha >= beta:
+                break
+        return column, value
+
 # function to get all vaild location
 def get_valid_locations(board):
     valid_locations = []
