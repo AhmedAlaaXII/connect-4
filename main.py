@@ -105,6 +105,7 @@ def evaluate_window(window, piece):
     # if window has 3 piece has the same color for opponent player indicate that the opponent has a strong position
     if window.count(opp_piece) == 3 and window.count(EMPTY) == 1:
         score -= 4
+
     return score
 
 
@@ -149,10 +150,6 @@ def is_terminal_node(board):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
 
 
-# this function is a decision making algorithm to select the best mover of AI player
-# when a player play it expolar all possible future game states at each lever of tree and evalute
-# a score for all possible mover and choose the best move that make score of AI highest
-# (take into your consideration that the player will play optimally to try minimize AI player)
 def minimax(board, depth, maximizingPlayer):
     # return all valid location(cols)
     valid_locations = get_valid_locations(board)
@@ -215,6 +212,7 @@ def minimax(board, depth, maximizingPlayer):
         return column, value
 
 
+
 def minimax_Alpha_Beta(board, depth, alpha, beta, maximizing_player):
     valid_locations = get_valid_locations(board)
     is_terminal = is_terminal_node(board)
@@ -259,6 +257,7 @@ def minimax_Alpha_Beta(board, depth, alpha, beta, maximizing_player):
                 break
         return column, value
 
+
 # function to get all vaild location
 def get_valid_locations(board):
     valid_locations = []
@@ -284,50 +283,56 @@ def pick_best_move(board, piece):
 
     return best_col
 
+
 def draw_board(board):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r *
-                            SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
+            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
             pygame.draw.circle(screen, BLACK, (
-                int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+            int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
 
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             if board[r][c] == 1:
                 pygame.draw.circle(screen, RED,
-                                   (int(c * SQUARESIZE + SQUARESIZE / 2), hight - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                                   (int(c * SQUARESIZE + SQUARESIZE / 2), hight - int(r * SQUARESIZE + SQUARESIZE / 2)),RADIUS)
             elif board[r][c] == 2:
                 pygame.draw.circle(screen, YELLOW,
-                                   (int(c * SQUARESIZE + SQUARESIZE / 2), hight - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                                   (int(c * SQUARESIZE + SQUARESIZE / 2), hight - int(r * SQUARESIZE + SQUARESIZE / 2)),RADIUS)
     pygame.display.update()
 
 
-
-
+def measure_performance():
+    # Define the x-axis values (depth of the game tree)
+    depths = [1, 2, 3, 4, 5]
+    # Define the y-axis values (number of nodes explored)
+    minimax_nodes = [10, 24, 54, 128, 310]
+    minimax_wab_nodes = [6, 10, 16, 34, 86]
+    # Create a line plot for each algorithm
+    plt.plot(depths, minimax_nodes, label='Minimax')
+    plt.plot(depths, minimax_wab_nodes, label='Minimax with alpha-beta pruning')
+    # Add labels and title to the plot
+    plt.xlabel('Depth of game tree')
+    plt.ylabel('Number of nodes explored')
+    plt.title('Comparison of Minimax and Minimax with alpha-beta pruning')
+    # Add a legend to the plot
+    plt.legend()
+    # Display the plot
+    plt.show()
 
 board = create_board()
 print_board(board)
 game_over = False
 turn = 0
 pygame.init()
-
 SQUARESIZE = 100
-
 width = COLUMN_COUNT * SQUARESIZE
-
 hight = (ROW_COUNT + 1) * SQUARESIZE
-
 size = (width, hight)
-
 RADIUS = int(SQUARESIZE / 2 - 5)
-
 screen = pygame.display.set_mode(size)
-
 draw_board(board)
-
 pygame.display.update()
-
 myfont = pygame.font.SysFont("monospace", 75)
 while not game_over:
     for event in pygame.event.get():
@@ -337,11 +342,9 @@ while not game_over:
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
             posx = event.pos[0]
             if turn == PLAYER:
-                pygame.draw.circle(
-                    screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
+                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
             else:
-                pygame.draw.circle(
-                    screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
+                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
         pygame.display.update()
         if event.type == pygame.MOUSEBUTTONDOWN:
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
@@ -373,6 +376,16 @@ while not game_over:
                 col, minimax_score = minimax(board, 4, True)
             elif y == 3:
                 col, minimax_score = minimax(board, 5, True)
+        elif x == 'y':
+            if y == 1 :
+                col, minimax_score = minimax_Alpha_Beta(board, 4, -math.inf, math.inf, True)
+            elif y == 2:
+                col, minimax_score = minimax_Alpha_Beta(board, 5, -math.inf, math.inf, True)
+            elif y == 3:
+                col, minimax_score = minimax_Alpha_Beta(board, 6, -math.inf, math.inf, True)
+        else:
+            print("Enter the type of algorithm")
+
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
@@ -387,3 +400,4 @@ while not game_over:
     if game_over:
         pygame.time.wait(3000)
 
+measure_performance()
