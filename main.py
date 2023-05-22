@@ -22,7 +22,6 @@ AI_PIECE = 2
 WINDOW_LENGTH = 4
 
 x = input("wiht alpha-beta or not (y,n)")
-y = int(input("choose the level 1 , 2 or 3 : "))
 
 # function to create a board
 def create_board():
@@ -150,6 +149,10 @@ def is_terminal_node(board):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
 
 
+# this function is a decision making algorithm to select the best mover of AI player
+# when a player play it expolar all possible future game states at each lever of tree and evalute
+# a score for all possible mover and choose the best move that make score of AI highest
+# (take into your consideration that the player will play optimally to try minimize AI player)
 def minimax(board, depth, maximizingPlayer):
     # return all valid location(cols)
     valid_locations = get_valid_locations(board)
@@ -191,6 +194,7 @@ def minimax(board, depth, maximizingPlayer):
                 value = new_score
                 column = col
         return column, value
+
     # miximizing player is false --> algo find move lead to lowest score of player
     else:  # Minimizing player
         # +ve infinty
@@ -212,7 +216,7 @@ def minimax(board, depth, maximizingPlayer):
         return column, value
 
 
-
+# minimax with alpha and beta
 def minimax_Alpha_Beta(board, depth, alpha, beta, maximizing_player):
     valid_locations = get_valid_locations(board)
     is_terminal = is_terminal_node(board)
@@ -289,7 +293,7 @@ def draw_board(board):
         for r in range(ROW_COUNT):
             pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
             pygame.draw.circle(screen, BLACK, (
-            int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
 
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
@@ -305,34 +309,49 @@ def draw_board(board):
 def measure_performance():
     # Define the x-axis values (depth of the game tree)
     depths = [1, 2, 3, 4, 5]
+
     # Define the y-axis values (number of nodes explored)
     minimax_nodes = [10, 24, 54, 128, 310]
     minimax_wab_nodes = [6, 10, 16, 34, 86]
+
     # Create a line plot for each algorithm
     plt.plot(depths, minimax_nodes, label='Minimax')
     plt.plot(depths, minimax_wab_nodes, label='Minimax with alpha-beta pruning')
+
     # Add labels and title to the plot
     plt.xlabel('Depth of game tree')
     plt.ylabel('Number of nodes explored')
     plt.title('Comparison of Minimax and Minimax with alpha-beta pruning')
+
     # Add a legend to the plot
     plt.legend()
+
     # Display the plot
     plt.show()
+
 
 board = create_board()
 print_board(board)
 game_over = False
 turn = 0
 pygame.init()
+
 SQUARESIZE = 100
+
 width = COLUMN_COUNT * SQUARESIZE
+
 hight = (ROW_COUNT + 1) * SQUARESIZE
+
 size = (width, hight)
+
 RADIUS = int(SQUARESIZE / 2 - 5)
+
 screen = pygame.display.set_mode(size)
+
 draw_board(board)
+
 pygame.display.update()
+
 myfont = pygame.font.SysFont("monospace", 75)
 while not game_over:
     for event in pygame.event.get():
@@ -349,40 +368,34 @@ while not game_over:
         if event.type == pygame.MOUSEBUTTONDOWN:
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
 
-            # Ask for player 1 input
-            if turn == PLAYER:
-                posx = event.pos[0]
-                col = int(math.floor(posx / SQUARESIZE))
-                if is_valid_location(board, col):
-                    row = get_next_open_row(board, col)
-                    drop_piece(board, row, col, PLAYER_PIECE)
-                    if winning_move(board, PLAYER_PIECE):
-                        label = myfont.render("PLAYER 1 WINS!!", 1, RED)
-                        screen.blit(label, (40, 10))
-                        game_over = True
+    # Ask for player 1 input
+    if turn == PLAYER:
+        if x == 'n':
+            col, minimax_score = minimax(board, 4, True)
+        elif x == 'y':
+                col, minimax_score = minimax_Alpha_Beta(board, 4, -math.inf, math.inf, True)
+        else:
+            print("Enter the type of algorithm")
+        if is_valid_location(board, col):
+            row = get_next_open_row(board, col)
+            drop_piece(board, row, col, PLAYER_PIECE)
+            if winning_move(board, PLAYER_PIECE):
+                label = myfont.render("PLAYER 1 WINS!!", 1, RED)
+                screen.blit(label, (40, 10))
+                game_over = True
 
-                    turn += 1
-                    turn = turn % 2
+            turn += 1
+            turn = turn % 2
 
-                    print_board(board)
-                    draw_board(board)
+            print_board(board)
+            draw_board(board)
 
     # Ask for player 2  input
     if turn == AI and not game_over:
         if x == 'n':
-            if y == 1 :
-                col, minimax_score = minimax(board, 3, True)
-            elif y == 2:
-                col, minimax_score = minimax(board, 4, True)
-            elif y == 3:
-                col, minimax_score = minimax(board, 5, True)
+            col, minimax_score = minimax(board, 4, True)
         elif x == 'y':
-            if y == 1 :
                 col, minimax_score = minimax_Alpha_Beta(board, 4, -math.inf, math.inf, True)
-            elif y == 2:
-                col, minimax_score = minimax_Alpha_Beta(board, 5, -math.inf, math.inf, True)
-            elif y == 3:
-                col, minimax_score = minimax_Alpha_Beta(board, 6, -math.inf, math.inf, True)
         else:
             print("Enter the type of algorithm")
 
@@ -390,7 +403,7 @@ while not game_over:
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
             if winning_move(board, AI_PIECE):
-                label = myfont.render("PLAYER 1 WINS!!!!", 1, YELLOW)
+                label = myfont.render("PLAYER 2 WINS!!!!", 1, YELLOW)
                 screen.blit(label, (40, 10))
                 game_over = True
             print_board(board)
